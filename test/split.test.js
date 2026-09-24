@@ -128,3 +128,19 @@ test('budget status and pace', () => {
   assert.equal(pace.elapsed, 2)
   assert.equal(pace.projected, 1500)
 })
+
+test('group summary lists settle-ups, UPI IDs and every person', async () => {
+  const { groupSummary } = await import('../lib/summary.js')
+  const trip = { name: 'Goa 2026', destination: 'North Goa', startDate: '2026-09-22', endDate: '2026-09-27' }
+  const members = [{ id: 'a', name: 'Prasanna', upi: 'prasanna@okicici' }, { id: 'b', name: 'Ravi' }, { id: 'c', name: 'Sneha' }]
+  const expenses = [{ id: '1', amount: 300000, paidBy: 'a', split: { type: 'equal', participants: ['a', 'b', 'c'] } }]
+  const text = groupSummary({ trip, members, balances: computeBalances(members, expenses, []) })
+  assert.match(text, /^\*Goa 2026\* \(North Goa, 22 Sept – 27 Sept\)/)
+  assert.match(text, /Total spent: ₹3,000 · about ₹1,000 per person/)
+  assert.match(text, /• Ravi pays Prasanna ₹1,000/)
+  assert.match(text, /• Sneha pays Prasanna ₹1,000/)
+  assert.match(text, /• Prasanna: prasanna@okicici/)
+  assert.match(text, /• Prasanna: paid ₹3,000, share ₹1,000, gets back ₹2,000/)
+  const settled = groupSummary({ trip, members, balances: computeBalances(members, [], []) })
+  assert.match(settled, /Everyone is settled up\./)
+})

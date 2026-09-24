@@ -59,8 +59,8 @@ function ShareCard({ onShare }) {
 function InviteNote() {
   return (
     <section className="card stack">
-      <h3 className="card-title">Invite the group</h3>
-      <p className="small secondary">Use Claude&apos;s Share button on this page to invite people. Anyone you give edit access can add expenses and receipt photos. People with view access can see balances and charts.</p>
+      <h3 className="card-title">Keep the group updated</h3>
+      <p className="small secondary">Everything you log is saved in this page. To show the others where things stand, open Balances and tap Copy summary, then paste it in your group chat.</p>
     </section>
   )
 }

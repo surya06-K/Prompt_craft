@@ -4,6 +4,7 @@ import { PAYMENT_METHODS, category } from '@/lib/categories'
 import { memberLedger, settleUp } from '@/lib/split'
 import { formatINR, parseRupees, paiseToInput } from '@/lib/money'
 import { todayISO } from '@/lib/insights'
+import { groupSummary } from '@/lib/summary'
 import { Avatar, Icon, Sheet, formatDate, nameOf } from './ui'
 
 function upiLink(member, amount, note) {
@@ -37,7 +38,10 @@ export function BalancesTab({ trip, members, payments, balances, me, readOnly, u
         </div>
       )}
 
-      <div className="section-title">Settle up</div>
+      <div className="row-between" style={{ marginTop: 8 }}>
+        <div className="section-title" style={{ margin: 0 }}>Settle up</div>
+        <CopySummary trip={trip} members={members} balances={balances} toast={toast} />
+      </div>
       {transfers.length ? (
         <div className="list">
           {transfers.map(t => {
@@ -120,6 +124,28 @@ export function BalancesTab({ trip, members, payments, balances, me, readOnly, u
         </div>
       )}
     </div>
+  )
+}
+
+// A WhatsApp-ready summary, so people who never open the app still see
+// who owes whom. Falls back to selectable text if the clipboard is refused.
+function CopySummary({ trip, members, balances, toast }) {
+  const [text, setText] = useState(null)
+  async function copy() {
+    const summary = groupSummary({ trip, members, balances })
+    try { await navigator.clipboard.writeText(summary); toast?.('Summary copied. Paste it in your group chat.') } catch { setText(summary) }
+  }
+  return (
+    <>
+      <button className="btn btn-sm" onClick={copy}><Icon name="copy" size={14} /> Copy summary</button>
+      {text != null && (
+        <Sheet title="Summary for the group" onClose={() => setText(null)}>
+          <p className="small secondary">Copy this and paste it in your WhatsApp group.</p>
+          <textarea className="input" readOnly value={text} rows={14} onFocus={e => e.target.select()} data-autofocus
+            style={{ fontSize: 14, fontFamily: 'inherit' }} aria-label="Trip summary" />
+        </Sheet>
+      )}
+    </>
   )
 }
 

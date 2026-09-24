@@ -182,6 +182,18 @@ export default function ExpenseForm({ api, members, me, expense, onClose, onSave
         </label>
 
         <div className="field">
+          <span className="label" id="paid-by-label">Paid by</span>
+          <div className="chips" role="radiogroup" aria-labelledby="paid-by-label">
+            {members.map(m => (
+              <button type="button" key={m.id} className="chip" role="radio" aria-checked={paidBy === m.id} aria-pressed={paidBy === m.id}
+                onClick={() => setPaidBy(m.id)}>
+                <Avatar members={members} id={m.id} size="sm" />{m.id === me ? `${m.name} (you)` : m.name}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="field">
           <span className="label">Category</span>
           <div className="chips">
             {CATEGORIES.map(c => (
@@ -192,18 +204,10 @@ export default function ExpenseForm({ api, members, me, expense, onClose, onSave
           </div>
         </div>
 
-        <div className="grid-2">
-          <label className="field">
-            <span>Paid by</span>
-            <select className="input" value={paidBy} onChange={e => setPaidBy(e.target.value)}>
-              {members.map(m => <option key={m.id} value={m.id}>{m.id === me ? `${m.name} (you)` : m.name}</option>)}
-            </select>
-          </label>
-          <label className="field">
-            <span>Date</span>
-            <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} required />
-          </label>
-        </div>
+        <label className="field">
+          <span>Date</span>
+          <input className="input" type="date" value={date} onChange={e => setDate(e.target.value)} required />
+        </label>
 
         <div className="field">
           <div className="row-between">
