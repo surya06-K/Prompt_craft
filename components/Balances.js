@@ -17,7 +17,7 @@ function netLabel(net) {
   return { text: 'settled up', cls: 'muted' }
 }
 
-export function BalancesTab({ trip, members, payments, balances, me, onRecord, onOpenMember, onDeletePayment }) {
+export function BalancesTab({ trip, members, payments, balances, me, readOnly, upiLinks = true, toast, onRecord, onOpenMember, onDeletePayment }) {
   const transfers = settleUp(balances, members.map(m => m.id))
   const mine = me ? balances[me] : null
   const byId = Object.fromEntries(members.map(m => [m.id, m]))
@@ -53,14 +53,18 @@ export function BalancesTab({ trip, members, payments, balances, me, onRecord, o
                   <span className="strong ellipsis">{nameOf(members, t.to, me)}</span>
                 </div>
                 <span className="num strong settle-amount">{formatINR(t.amount)}</span>
-                <div className="row settle-actions">
-                  {canUpi && (
-                    <a className="btn btn-sm" href={upiLink(to, t.amount, `${trip.name} settle-up`)}>Pay via UPI</a>
-                  )}
-                  <button className="btn btn-sm btn-primary" onClick={() => onRecord({ from: t.from, to: t.to, amount: t.amount })}>
-                    <Icon name="check" size={14} /> Mark paid
-                  </button>
-                </div>
+                {(canUpi || !readOnly) && (
+                  <div className="row settle-actions">
+                    {canUpi && (upiLinks
+                      ? <a className="btn btn-sm" href={upiLink(to, t.amount, `${trip.name} settle-up`)}>Pay via UPI</a>
+                      : <CopyUpi upi={to.upi} toast={toast} />)}
+                    {!readOnly && (
+                      <button className="btn btn-sm btn-primary" onClick={() => onRecord({ from: t.from, to: t.to, amount: t.amount })}>
+                        <Icon name="check" size={14} /> Mark paid
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )
           })}
@@ -69,8 +73,11 @@ export function BalancesTab({ trip, members, payments, balances, me, onRecord, o
         <div className="card notice-good notice" style={{ border: 'none' }}><Icon name="check" size={16} /> Everyone is settled up.</div>
       )}
       <div className="tiny muted" style={{ padding: '0 2px' }}>
-        The fewest payments that clear every balance. Use “Pay via UPI” on your phone to open GPay, PhonePe or Paytm with the amount filled in.
-        Add UPI IDs under Settings → People.
+        The fewest payments that clear every balance.{' '}
+        {upiLinks
+          ? 'Use “Pay via UPI” on your phone to open GPay, PhonePe or Paytm with the amount filled in.'
+          : 'Copy someone’s UPI ID, then pay them from GPay, PhonePe or Paytm.'}
+        {' '}Add UPI IDs under Settings → People.
       </div>
 
       <div className="row-between" style={{ marginTop: 8 }}>
@@ -99,12 +106,12 @@ export function BalancesTab({ trip, members, payments, balances, me, onRecord, o
 
       <div className="row-between" style={{ marginTop: 8 }}>
         <div className="section-title" style={{ margin: 0 }}>Payments between you</div>
-        <button className="btn btn-sm" onClick={() => onRecord({})}><Icon name="plus" size={14} /> Record payment</button>
+        {!readOnly && <button className="btn btn-sm" onClick={() => onRecord({})}><Icon name="plus" size={14} /> Record payment</button>}
       </div>
       {payments.length ? (
         <div className="list">
           {payments.map(p => (
-            <PaymentRow key={p.id} p={p} members={members} me={me} onDelete={onDeletePayment} />
+            <PaymentRow key={p.id} p={p} members={members} me={me} onDelete={readOnly ? null : onDeletePayment} />
           ))}
         </div>
       ) : (
@@ -114,6 +121,17 @@ export function BalancesTab({ trip, members, payments, balances, me, onRecord, o
       )}
     </div>
   )
+}
+
+// Inside Claude, upi:// links often can't open other apps, so offer the ID
+// itself: copy it, or select the text if the clipboard is refused.
+function CopyUpi({ upi, toast }) {
+  const [shown, setShown] = useState(false)
+  async function copy() {
+    try { await navigator.clipboard.writeText(upi); toast?.(`Copied ${upi}`) } catch { setShown(true) }
+  }
+  if (shown) return <input className="input btn-sm" readOnly value={upi} onFocus={e => e.target.select()} autoFocus style={{ width: 180, fontSize: 14 }} aria-label="UPI ID" />
+  return <button className="btn btn-sm" onClick={copy}><Icon name="copy" size={14} /> Copy UPI ID</button>
 }
 
 function PaymentRow({ p, members, me, onDelete }) {
@@ -140,7 +158,7 @@ function PaymentRow({ p, members, me, onDelete }) {
             Delete
           </button>
         </span>
-      ) : (
+      ) : onDelete && (
         <button className="icon-btn" onClick={() => setConfirming(true)} aria-label="Delete payment"><Icon name="trash" size={16} /></button>
       )}
     </div>

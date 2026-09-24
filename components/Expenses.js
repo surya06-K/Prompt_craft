@@ -112,8 +112,10 @@ export function ExpensesTab({ trip, members, expenses, me, balances, onOpen, onA
         <div className="card empty">
           <div className="big">🧾</div>
           <p className="strong" style={{ color: 'var(--text)' }}>No expenses yet</p>
-          <p className="small" style={{ margin: '4px 0 14px' }}>Log the first one. Everyone with the link can add theirs too.</p>
-          <button className="btn btn-primary" onClick={onAdd}><Icon name="plus" size={16} /> Add expense</button>
+          <p className="small" style={{ margin: '4px 0 14px' }}>
+            {onAdd ? 'Log the first one. Everyone with the link can add theirs too.' : 'Expenses show up here as soon as they are added.'}
+          </p>
+          {onAdd && <button className="btn btn-primary" onClick={onAdd}><Icon name="plus" size={16} /> Add expense</button>}
         </div>
       ) : !filtered.length ? (
         <div className="empty">Nothing matches those filters.</div>
@@ -163,7 +165,7 @@ function ExpenseRow({ e, members, me, onOpen, showDate }) {
   )
 }
 
-export function ExpenseDetail({ expense: e, members, me, api, onClose, onEdit, onDelete }) {
+export function ExpenseDetail({ expense: e, members, me, api, readOnly, onClose, onEdit, onDelete }) {
   const [confirming, setConfirming] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
@@ -180,7 +182,7 @@ export function ExpenseDetail({ expense: e, members, me, api, onClose, onEdit, o
     <Sheet
       title="Expense"
       onClose={onClose}
-      footer={confirming ? (
+      footer={readOnly ? null : confirming ? (
         <>
           <span className="grow small">Delete “{e.title}”?</span>
           <button className="btn" onClick={() => setConfirming(false)}>Keep</button>

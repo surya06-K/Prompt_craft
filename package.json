@@ -7,11 +7,15 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/**/*.test.js\"",
+    "build:artifact": "node artifact/build.mjs"
   },
   "dependencies": {
     "next": "^16.3.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.12"
   }
 }

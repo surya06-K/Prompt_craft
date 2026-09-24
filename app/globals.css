@@ -42,8 +42,10 @@
   --m7: #E34948; --m7-ink: #1A1714;
 }
 
+/* dark palette: follows the OS unless the viewer explicitly picked light,
+   and applies whenever the viewer explicitly picked dark */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme='light']) {
     color-scheme: dark;
     --bg: #111110;
     --surface: #1A1A19;
@@ -79,6 +81,43 @@
     --m6: #9085E9; --m6-ink: #1A1714;
     --m7: #E66767; --m7-ink: #1A1714;
   }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #111110;
+  --surface: #1A1A19;
+  --surface-2: #232321;
+  --surface-3: #2C2C2A;
+  --border: #2F2E2B;
+  --border-strong: #45443F;
+  --text: #F4F2EE;
+  --text-2: #C3C2B7;
+  --text-3: #9A988F;
+  --accent: #5BB8AC;
+  --accent-hover: #72C7BC;
+  --accent-soft: #1D3431;
+  --accent-ink: #0B1F1C;
+  --good: #0CA30C;
+  --good-soft: #15291A;
+  --bad: #F07474;
+  --bad-soft: #3A1F1F;
+  --warn-ink: #FAB219;
+  --warn-soft: #3A2F14;
+  --series-1: #3987E5;
+  --series-2: #D95926;
+  --grid: #2C2C2A;
+  --axis: #383835;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 6px 20px rgba(0, 0, 0, .35);
+
+  --m0: #3987E5; --m0-ink: #1A1714;
+  --m1: #D95926; --m1-ink: #1A1714;
+  --m2: #199E70; --m2-ink: #1A1714;
+  --m3: #C98500; --m3-ink: #1A1714;
+  --m4: #D55181; --m4-ink: #1A1714;
+  --m5: #008300; --m5-ink: #FFFFFF;
+  --m6: #9085E9; --m6-ink: #1A1714;
+  --m7: #E66767; --m7-ink: #1A1714;
 }
 
 html, body {
@@ -139,9 +178,8 @@ a { color: var(--accent); }
 
 .brand { font-family: 'DM Serif Display', Georgia, serif; font-size: 22px; letter-spacing: -.01em; color: var(--text); text-decoration: none; }
 .topbar {
-  position: sticky; top: 0; z-index: 20;
-  background: color-mix(in srgb, var(--bg) 88%, transparent);
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20;
+  background: var(--bg);
   border-bottom: 1px solid var(--border);
 }
 .topbar-inner { max-width: 760px; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; gap: 12px; }

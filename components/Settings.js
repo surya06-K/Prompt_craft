@@ -24,14 +24,20 @@ function useSave(toast) {
   return { busy, error, setError, run }
 }
 
-export function SettingsTab({ trip, members, me, api, onChanged, onSetMe, onShare, onForget, toast }) {
+export function SettingsTab({ trip, members, me, api, readOnly, onChanged, onSetMe, onShare, onForget, toast }) {
   return (
     <div className="stack-lg">
-      <ShareCard onShare={onShare} />
+      {onShare ? <ShareCard onShare={onShare} /> : !readOnly && <InviteNote />}
       <DeviceCard members={members} me={me} onSetMe={onSetMe} onForget={onForget} />
-      <PeopleCard members={members} me={me} api={api} onChanged={onChanged} toast={toast} />
-      <BudgetCard trip={trip} api={api} onChanged={onChanged} toast={toast} />
-      <DetailsCard trip={trip} api={api} onChanged={onChanged} toast={toast} />
+      {readOnly ? (
+        <div className="notice notice-info small"><Icon name="users" size={16} />You can view this trip. Ask the person who set it up to give you edit access if you want to add expenses.</div>
+      ) : (
+        <>
+          <PeopleCard members={members} me={me} api={api} onChanged={onChanged} toast={toast} />
+          <BudgetCard trip={trip} api={api} onChanged={onChanged} toast={toast} />
+          <DetailsCard trip={trip} api={api} onChanged={onChanged} toast={toast} />
+        </>
+      )}
     </div>
   )
 }
@@ -50,6 +56,15 @@ function ShareCard({ onShare }) {
   )
 }
 
+function InviteNote() {
+  return (
+    <section className="card stack">
+      <h3 className="card-title">Invite the group</h3>
+      <p className="small secondary">Use Claude&apos;s Share button on this page to invite people. Anyone you give edit access can add expenses and receipt photos. People with view access can see balances and charts.</p>
+    </section>
+  )
+}
+
 function DeviceCard({ members, me, onSetMe, onForget }) {
   return (
     <section className="card stack">
@@ -62,7 +77,7 @@ function DeviceCard({ members, me, onSetMe, onForget }) {
         </select>
       </label>
       <p className="tiny muted">Used to fill in “Paid by”, show your share and tag who added what.</p>
-      <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={onForget}>Remove this trip from my recent trips</button>
+      {onForget && <button className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={onForget}>Remove this trip from my recent trips</button>}
     </section>
   )
 }

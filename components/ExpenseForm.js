@@ -268,10 +268,12 @@ export default function ExpenseForm({ api, members, me, expense, onClose, onSave
           {splitType === 'shares' && <div className="tiny muted">Shares are weights. A couple could be 2 and everyone else 1.</div>}
         </div>
 
-        <div className="field">
-          <span className="label">Receipt photos</span>
-          <ReceiptPicker items={receipts} onAdd={addReceipts} onRemove={removeReceipt} receiptUrl={api.receiptUrl} />
-        </div>
+        {api.canUploadReceipts !== false && (
+          <div className="field">
+            <span className="label">Receipt photos</span>
+            <ReceiptPicker items={receipts} onAdd={addReceipts} onRemove={removeReceipt} receiptUrl={api.receiptUrl} />
+          </div>
+        )}
 
         {!showMore ? (
           <button type="button" className="btn btn-ghost btn-sm" style={{ alignSelf: 'flex-start' }} onClick={() => setShowMore(true)}>

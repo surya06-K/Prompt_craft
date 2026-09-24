@@ -1,6 +1,5 @@
 'use client'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import Link from 'next/link'
 import { computeBalances } from '@/lib/split'
 import { tripApi, getMe, setMe as storeMe, rememberTrip, forgetTrip } from './client'
 import { Avatar, Icon, Sheet, tripDates, useToast } from './ui'
@@ -18,7 +17,13 @@ const TABS = [
 ]
 const POLL_MS = 15000
 
-export default function TripApp({ tripId, justCreated }) {
+// What the host page can do. The Next.js site can share links and open UPI
+// apps; inside Claude those are handled differently (see artifact/).
+export const WEB_PLATFORM = { share: true, upiLinks: true, homeHref: '/', forget: true }
+
+// `api` may be injected (the Claude page brings its own store); otherwise the
+// Next.js JSON API is used. `readOnly` hides every control that changes data.
+export default function TripApp({ tripId, justCreated, api: injectedApi, platform = WEB_PLATFORM, readOnly = false }) {
   const [data, setData] = useState(null)
   const [loadError, setLoadError] = useState(null)
   const [meRaw, setMeRaw] = useState(undefined) // undefined until read from storage
@@ -27,7 +32,7 @@ export default function TripApp({ tripId, justCreated }) {
   const [toastNode, toast] = useToast()
   const meRef = useRef(null)
 
-  const api = useMemo(() => tripApi(tripId, () => meRef.current), [tripId])
+  const api = useMemo(() => injectedApi || tripApi(tripId, () => meRef.current), [injectedApi, tripId])
 
   const refresh = useCallback(async () => {
     try {
@@ -40,7 +45,8 @@ export default function TripApp({ tripId, justCreated }) {
     }
   }, [api])
 
-  // first load, then poll while the tab is visible so everyone sees new expenses
+  // first load, then live updates (injected store) or polling while the tab
+  // is visible, so everyone sees new expenses
   useEffect(() => {
     setMeRaw(getMe(tripId))
     const hash = window.location.hash.slice(1)
@@ -48,6 +54,7 @@ export default function TripApp({ tripId, justCreated }) {
     if (justCreated) setSheet({ kind: 'share' })
 
     refresh()
+    if (api.subscribe) return api.subscribe(refresh)
     const tick = () => { if (document.visibilityState === 'visible') refresh() }
     const timer = setInterval(tick, POLL_MS)
     document.addEventListener('visibilitychange', tick)
@@ -57,11 +64,11 @@ export default function TripApp({ tripId, justCreated }) {
       document.removeEventListener('visibilitychange', tick)
       window.removeEventListener('focus', tick)
     }
-  }, [tripId, justCreated, refresh])
+  }, [tripId, justCreated, refresh, api])
 
   useEffect(() => {
     if (!data) return
-    rememberTrip(data.trip)
+    if (platform.homeHref) rememberTrip(data.trip)
     document.title = `${data.trip.name} · TripSplit`
   }, [data?.trip]) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -85,7 +92,7 @@ export default function TripApp({ tripId, justCreated }) {
 
   function switchTab(id) {
     setTab(id)
-    window.history.replaceState(null, '', `#${id}`)
+    try { window.history.replaceState(null, '', `#${id}`) } catch {}
     window.scrollTo({ top: 0 })
   }
 
@@ -153,7 +160,7 @@ export default function TripApp({ tripId, justCreated }) {
     <>
       <header className="topbar">
         <div className="topbar-inner">
-          <Link href="/" className="icon-btn" aria-label="All trips"><Icon name="back" /></Link>
+          {platform.homeHref && <a href={platform.homeHref} className="icon-btn" aria-label="All trips"><Icon name="back" /></a>}
           <div className="grow" style={{ minWidth: 0 }}>
             <div className="trip-title ellipsis">{trip.name}</div>
             {sub && <div className="small muted ellipsis">{sub}</div>}
@@ -166,7 +173,8 @@ export default function TripApp({ tripId, justCreated }) {
             ))}
             {members.length > 5 && <span className="tiny muted" style={{ marginLeft: 4 }}>+{members.length - 5}</span>}
           </button>
-          <button className="icon-btn" onClick={share} aria-label="Share trip link"><Icon name="share" /></button>
+          {platform.share && <button className="icon-btn" onClick={share} aria-label="Share trip link"><Icon name="share" /></button>}
+          {readOnly && <span className="badge">View only</span>}
         </div>
         <nav className="tabs" role="tablist" aria-label="Trip sections">
           {TABS.map(t => (
@@ -186,10 +194,11 @@ export default function TripApp({ tripId, justCreated }) {
         )}
         {tab === 'expenses' && (
           <ExpensesTab trip={trip} members={members} expenses={expenses} me={me} balances={balances}
-            onOpen={e => setSheet({ kind: 'view', id: e.id })} onAdd={() => setSheet({ kind: 'add' })} />
+            onOpen={e => setSheet({ kind: 'view', id: e.id })} onAdd={readOnly ? null : () => setSheet({ kind: 'add' })} />
         )}
         {tab === 'balances' && (
           <BalancesTab trip={trip} members={members} payments={payments} balances={balances} me={me}
+            readOnly={readOnly} upiLinks={platform.upiLinks} toast={toast}
             onRecord={initial => setSheet({ kind: 'pay', initial })}
             onOpenMember={id => setSheet({ kind: 'member', id })}
             onDeletePayment={deletePayment} />
@@ -200,12 +209,13 @@ export default function TripApp({ tripId, justCreated }) {
         )}
         {tab === 'settings' && (
           <SettingsTab trip={trip} members={members} me={me} api={api} onChanged={refresh} toast={toast}
-            onSetMe={id => chooseMe(id || '')} onShare={share}
-            onForget={() => { forgetTrip(tripId); window.location.href = '/' }} />
+            readOnly={readOnly} onSetMe={id => chooseMe(id || '')}
+            onShare={platform.share ? share : null}
+            onForget={platform.forget ? () => { forgetTrip(tripId); window.location.href = platform.homeHref } : null} />
         )}
       </main>
 
-      {tab !== 'settings' && (
+      {tab !== 'settings' && !readOnly && (
         <button className="fab" onClick={() => setSheet({ kind: 'add' })}><Icon name="plus" /> Add expense</button>
       )}
 
@@ -215,7 +225,7 @@ export default function TripApp({ tripId, justCreated }) {
           onSaved={onExpenseSaved} />
       )}
       {viewing && (
-        <ExpenseDetail expense={viewing} members={members} me={me} api={api}
+        <ExpenseDetail expense={viewing} members={members} me={me} api={api} readOnly={readOnly}
           onClose={() => setSheet(null)} onEdit={e => setSheet({ kind: 'edit', expense: e })} onDelete={deleteExpense} />
       )}
       {sheet?.kind === 'pay' && (
@@ -262,7 +272,7 @@ function LoadError({ error, onRetry }) {
       </p>
       <p className="small">{notFound ? 'Check the link. It may have been mistyped.' : error.message}</p>
       <div className="row">
-        <Link href="/" className="btn">All trips</Link>
+        <a href="/" className="btn">All trips</a>
         {!notFound && <button className="btn btn-primary" onClick={onRetry}><Icon name="refresh" size={16} /> Try again</button>}
       </div>
     </div>
